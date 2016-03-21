@@ -1,2 +1,2 @@
 # blog
-doing this job with nodejs 
+doing this job with nodejs and mongodb
