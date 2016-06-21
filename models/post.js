@@ -115,12 +115,25 @@ Post.getOne = function(name,day,title,callback){
         "time.day":day,
         "title":title,
       },function(err,doc){
-        mongodb.close();
         if(err){
+          mongodb.close();
           return callback(err);
         }
-        // doc.post = markdown.toHTML(doc.post);
-        if(doc){
+        if (doc) {
+          //每访问 1 次，pv 值增加 1
+          collection.update({
+            "name": name,
+            "time.day": day,
+            "title": title
+          }, {
+            $inc: {"pv": 1}
+          }, function (err) {
+            mongodb.close();
+            if (err) {
+              return callback(err);
+            }
+          });
+          // doc.post = markdown.toHTML(doc.post);
           //解析 markdown 为 html
           doc.post = markdown.toHTML(doc.post);
           if(doc.comments){
@@ -128,8 +141,8 @@ Post.getOne = function(name,day,title,callback){
               comment.content = markdown.toHTML(comment.content);
             });
           }
+          callback(null,doc);//返回查询的一篇文章
         }
-        callback(null,doc);//返回查询的一篇文章
       });
     });
   });
@@ -248,6 +261,89 @@ Post.getArchive = function(callback){
           return callback(err);
         }
         callback(null,docs);
+      });
+    });
+  });
+};
+
+//返回所有标签
+Post.getTags = function(callback) {
+  mongodb.open(function (err, db) {
+    if(err) {
+      return callback(err);
+    }
+    db.collection('posts', function(err, collection) {
+      if(err) {
+        mongodb.close();
+        return callback(err);
+      }
+      //distinct 用来找出给定键的所有不同值  返回 tags 键的所有不同值，因为有时候我们发表文章的标签是一样的，所以这样避免了获取重复的标签。
+      collection.distinct("tags", function(err, docs) {
+        mongodb.close();
+        if (err) {
+          return callback(err);
+        }
+        callback(null, docs);
+      });
+    });
+  });
+};
+Post.getTag = function(tag, callback) {
+  mongodb.open(function(err, db) {
+    if(err) {
+      return callback(err);
+    }
+    db.collection('posts', function(err, collection) {
+      if(err) {
+        mongodb.close();
+        return callback(err);
+      }
+      //查询所有 tags 数组内包含 tag 的文档并返回只含有 name \ time \ title 组成的数组
+      collection.find({
+        "tags": tag
+      }, {
+        "name":1,
+        "time":1,
+        "title":1
+      }).sort({
+        time: -1
+      }).toArray(function (err, docs) {
+        mongodb.close();
+        if(err) {
+          return callback(err);
+        }
+        callback(null, docs)
+      });
+    });
+  });
+};
+
+// 返回通过标题关键字查询的所有文章信息
+Post.search = function(keyword, callback) {
+  mongodb.open(function(err, db) {
+    if (err) {
+      return callback(err);
+    }
+    db.collection('posts', function (err, collection) {
+      if (err) {
+        mongodb.close();
+        return callback(err);
+      }
+      var pattern = new RegExp(keyword, "i");
+      collection.find({
+        "title": pattern
+      },{
+        "name": 1,
+        "time": 1,
+        "title": 1
+      }).sort({
+        time: -1
+      }).toArray(function (err, docs) {
+        mongodb.close();
+        if (err) {
+          return callback(err);
+        }
+        callback(null, docs);
       });
     });
   });

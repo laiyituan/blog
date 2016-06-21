@@ -125,6 +125,29 @@ module.exports = function(app) {
     req.flash('success','文件上传成功！');
     res.redirect('/upload');
   });
+  app.get('/links', function (req, res) {
+    res.render('links', {
+      title: '友情链接',
+      user: req.session.user,
+      success: req.flash('success').toString(),
+      error: req.flash('error').toString()
+    });
+  });
+  app.get('/search', function (req, res) {
+    Post.search(req.query.keyword, function (err, posts) {
+      if (err) {
+        req.flash('error', err);
+        return res.redirect('/');
+      }
+      res.render('search', {
+        title: "搜索：" + req.query.keyword,
+        posts: posts,
+        user: req.session.user,
+        success: req.flash('success').toString(),
+        error: req.flash('error').toString()
+      });
+    });
+  });
   app.get('/u/:name',function(req,res){
     var page = parseInt(req.query.p) || 1;
     //检查用户是否存在
@@ -249,6 +272,38 @@ app.get('/archive',function(req,res){
       user:req.session.user,
       success:req.flash('success').toString(),
       error:req.flash('error').toString()
+    });
+  });
+});
+
+app.get('/tags', function(req, res) {
+  Post.getTags(function (err, posts) {
+    if (err) {
+      req.flash('error', err);
+      return res.redirect('/');
+    }
+    res.render('tags', {
+      title: '标签',
+      posts: posts,
+      user: req.session.user,
+      success: req.flash('success').toString(),
+      error: req.flash('error').toString()
+    });
+  });
+});
+
+app.get('/tags/:tag', function(req, res) {
+  Post.getTag(req.params.tag, function(err, posts) {
+    if (err) {
+      req.flash('error', err);
+      return res.redirect('/')
+    }
+    res.render('tag',{
+      title: '标签:' + req.params.tag,
+      posts: posts,
+      user: req.session.user,
+      success: req.flash('success').toString(),
+      error: req.flash('error').toString()
     });
   });
 });
